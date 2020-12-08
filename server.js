@@ -4,7 +4,11 @@ const path = require("path");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 
+const dotenv = require("dotenv");
+
+dotenv.config();
 const app = express();
+const secret = process.env.SECRET;
 
 app.use(cors());
 
@@ -17,18 +21,6 @@ app.use(bodyParser.json());
 const employeeRoutes = require("./src/routes/client.routes");
 
 app.use("/api/v1/simple-fast-backup", employeeRoutes);
-
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, "public")));
-app.use(
-	session({
-		secret: "projetoIntegrador",
-		cookie: { maxAge: 60000 },
-		resave: false,
-		saveUninitialized: false,
-	})
-);
 
 app.listen(port, () => {
 	console.clear();

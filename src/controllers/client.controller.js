@@ -1,13 +1,14 @@
 "use strict";
+const jwt = require("jsonwebtoken");
 
 const Client = require("../models/client.model");
-
+const Auth = require("../utils/auth");
 const scriptsController = require("../controllers/scripts.controller");
 
 module.exports = {
 	async findAll(req, res) {
 		Client.findAll(function (err, client) {
-			if (err) res.send(err);
+			if (err) res.status(401).send(err);
 			res.send(client);
 		});
 	},
@@ -25,7 +26,7 @@ module.exports = {
 			});
 		} else {
 			Client.create(new_employee, function (err, client) {
-				if (err) res.send(err);
+				if (err) res.status(401).send(err);
 				res.json({
 					error: false,
 					message: "Cliente added successfully!",
@@ -37,7 +38,7 @@ module.exports = {
 
 	async findById(req, res) {
 		Client.findById(req.params.codigo, function (err, client) {
-			if (err) res.send(err);
+			if (err) res.status(401).send(err);
 			res.json(client);
 		});
 	},
@@ -56,7 +57,7 @@ module.exports = {
 				req.params.codigo,
 				new Client(req.body),
 				function (err, client) {
-					if (err) res.send(err);
+					if (err) res.status(401).send(err);
 					res.json({
 						error: false,
 						message: "Cliente atualizado com sucesso",
@@ -80,7 +81,7 @@ module.exports = {
 			const ativar = req.query.perm_bkp_autm;
 
 			Client.findById(codigoCliente, function (err, client) {
-				if (err) res.send(err);
+				if (err) res.status(401).send(err);
 				else if (client) {
 					const clienteSelecionado = client;
 					const clienteAtualizado = new Client({
@@ -95,7 +96,7 @@ module.exports = {
 							perm_bkp_autm: Number(ativar),
 						}),
 						function (err, client) {
-							if (err) res.send(err);
+							if (err) res.status(401).send(err);
 							scriptsController.backup_automatico();
 
 							res.json({
@@ -124,7 +125,7 @@ module.exports = {
 			const notificar = req.query.perm_alerta;
 
 			Client.findById(codigoCliente, function (err, client) {
-				if (err) res.send(err);
+				if (err) res.status(401).send(err);
 				else if (client) {
 					const clienteSelecionado = client;
 					const clienteAtualizado = new Client({
@@ -139,7 +140,7 @@ module.exports = {
 							perm_alerta: Number(notificar),
 						}),
 						function (err, client) {
-							if (err) res.send(err);
+							if (err) res.status(401).send(err);
 							res.json({
 								error: false,
 								message: "Cliente atualizado com sucesso",
@@ -165,7 +166,7 @@ module.exports = {
 			const codigoCliente = req.params.codigo;
 
 			Client.findById(codigoCliente, function (err, client) {
-				if (err) res.send(err);
+				if (err) res.status(401).send(err);
 				else if (client) {
 					scriptsController.realizacao_backup(codigoCliente);
 
@@ -194,7 +195,7 @@ module.exports = {
 			const mes = req.body.mes;
 
 			Client.findById(codigoCliente, function (err, client) {
-				if (err) res.send(err);
+				if (err) res.status(401).send(err);
 				else if (client) {
 					scriptsController.restauracao_backup(
 						codigoCliente,
@@ -225,7 +226,7 @@ module.exports = {
 			const horaBackup = req.query.hora_bkp_autm;
 
 			Client.findById(codigoCliente, function (err, client) {
-				if (err) res.send(err);
+				if (err) res.status(401).send(err);
 				else if (client) {
 					const clienteSelecionado = client;
 					const clienteAtualizado = new Client({
@@ -237,7 +238,7 @@ module.exports = {
 						req.params.codigo,
 						new Client({ ...clienteAtualizado }),
 						function (err, client) {
-							if (err) res.send(err);
+							if (err) res.status(401).send(err);
 							scriptsController.backup_automatico();
 							res.json({
 								error: false,
@@ -261,42 +262,38 @@ module.exports = {
 				message: "Por favor forneça todos os campos obrigatórios.",
 			});
 		} else {
-			const codigoCliente = req.params.codigo;
+			const nome = req.body.nome;
+			const senha = req.body.password_call;
 
-			if (Number(codigoCliente) === 1000) {
-				res.status(400).send({
-					error: true,
-					message: "Login não disponível para esse cliente.",
-				});
-			} else {
-				const senha = req.body.password_call;
-
-				Client.validatePassword(
-					codigoCliente,
-					function (err, password_call) {
-						if (err) res.send(err);
-						else if (`${password_call}` === `${senha}`) {
-							res.json({
-								error: false,
-								message: "Cliente autorizado",
-							});
-						} else {
-							res.status(401).send({
-								error: true,
-								message: "Usuário ou senha inválidos.",
-							});
-						}
-					}
-				);
-			}
+			Client.validatePassword(nome, function (err, response) {
+				if (err || !response || response.length === 0)
+					res.status(401).send(err);
+				else if (`${response.codigo}` === `1000`) {
+					res.status(400).send({
+						error: true,
+						message: "Login não disponível para esse cliente.",
+					});
+				} else if (`${response.password_call}` === `${senha}`) {
+					res.json({
+						error: false,
+						token: Auth.getToken(response.codigo),
+						message: "Cliente autorizado",
+					});
+				} else {
+					res.status(401).send({
+						error: true,
+						message: "Usuário ou senha inválidos.",
+					});
+				}
+			});
 		}
 	},
 
 	async alterarSenha(req, res) {
 		if (
 			req.body.constructor === Object &&
-			Object.keys(req.body).length === 0 &&
-			Object.keys(req.params).length === 0
+			(Object.keys(req.params).length === 0 ||
+				Object.keys(req.body).length < 3)
 		) {
 			res.status(400).send({
 				error: true,
@@ -304,48 +301,47 @@ module.exports = {
 			});
 			return;
 		} else {
+			const nome = req.body.nome;
 			const codigoCliente = req.params.codigo;
 			const senha = req.body.password_call;
 			const novaSenha = req.body.new_password_call;
 
 			Client.findById(codigoCliente, function (err, client) {
-				if (err) res.send(err);
+				if (err || !client || client.length === 0)
+					res.status(401).send(err);
 				else if (client) {
-					Client.validatePassword(
-						codigoCliente,
-						function (err, password_call) {
-							if (err) res.send(err);
-							else if (`${password_call}` === `${senha}`) {
-								const clienteSelecionado = client;
-								const clienteAtualizado = new Client({
-									...clienteSelecionado,
-									password_call: novaSenha,
-								});
+					Client.validatePassword(nome, function (err, response) {
+						if (err || !response || response.length === 0)
+							res.status(401).send(err);
+						else if (`${response.password_call}` === `${senha}`) {
+							const clienteSelecionado = client;
+							const clienteAtualizado = new Client({
+								...clienteSelecionado,
+								password_call: novaSenha,
+							});
 
-								Client.update(
-									req.params.codigo,
-									clienteAtualizado,
-									function (err, client) {
-										if (err) res.send(err);
-										scriptsController.refazer_sip(
-											codigoCliente
-										);
-										res.json({
-											error: false,
-											message:
-												"Senha atualizada com sucesso",
-											client,
-										});
-									}
-								);
-							} else {
-								res.status(401).send({
-									error: true,
-									message: "Usuário ou senha inválidos.",
-								});
-							}
+							Client.update(
+								req.params.codigo,
+								clienteAtualizado,
+								function (err, client) {
+									if (err) res.status(401).send(err);
+									scriptsController.refazer_sip(
+										codigoCliente
+									);
+									res.json({
+										error: false,
+										message: "Senha atualizada com sucesso",
+										client,
+									});
+								}
+							);
+						} else {
+							res.status(401).send({
+								error: true,
+								message: "Usuário ou senha inválidos.",
+							});
 						}
-					);
+					});
 				}
 			});
 		}
@@ -353,7 +349,7 @@ module.exports = {
 
 	async delete(req, res) {
 		Client.delete(req.params.codigo, function (err, client) {
-			if (err) res.send(err);
+			if (err) res.status(401).send(err);
 			res.json({ error: false, message: "Cliente removido com sucesso" });
 		});
 	},

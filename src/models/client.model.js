@@ -11,7 +11,6 @@ var Client = function (client) {
 	this.usuario = client.usuario;
 	this.password = client.password;
 	this.ip = client.ip;
-	this.so = client.so;
 	this.origem_bkp = client.origem_bkp;
 	this.uso_max_armaz = client.uso_max_armaz;
 	this.porc_uso_armaz = client.porc_uso_armaz;
@@ -43,23 +42,31 @@ Client.findById = async function (codigo, result) {
 				console.log("error: ", err);
 				result(err, null);
 			} else {
+				console.log("res :", res);
 				result(null, res && res[0]);
 			}
 		}
 	);
 };
 
-Client.validatePassword = async function (codigo, result) {
+Client.validatePassword = async function (nome, result) {
 	dbConn.query(
-		"Select password_call from clientes where codigo = ? ",
-		codigo,
+		"Select password_call, codigo from clientes where nome = ? ",
+		nome,
 		function (err, res) {
 			if (err) {
 				console.log("error: ", err);
 				result(err, null);
 			} else {
 				console.log("res :", res);
-				result(null, res && res[0] && res[0].password_call);
+				result(
+					null,
+					res &&
+						res[0] && {
+							password_call: res[0].password_call,
+							codigo: res[0].codigo,
+						}
+				);
 			}
 		}
 	);
@@ -79,14 +86,13 @@ Client.findAll = function (result) {
 
 Client.update = function (codigo, client, result) {
 	dbConn.query(
-		"UPDATE clientes SET nome=?,password_call=?,usuario=?,password=?,ip=?,so=?,origem_bkp=?,uso_max_armaz=?,porc_uso_armaz=?,perm_alerta=?,perm_bkp_autm=?,hora_bkp_autm=?,apto_backup=?,user_block=?    WHERE codigo = ?",
+		"UPDATE clientes SET nome=?,password_call=?,usuario=?,password=?,ip=?,origem_bkp=?,uso_max_armaz=?,porc_uso_armaz=?,perm_alerta=?,perm_bkp_autm=?,hora_bkp_autm=?,apto_backup=?,user_block=?    WHERE codigo = ?",
 		[
 			client.nome,
 			client.password_call,
 			client.usuario,
 			client.password,
 			client.ip,
-			client.so,
 			client.origem_bkp,
 			client.uso_max_armaz,
 			client.porc_uso_armaz,
