@@ -15,5 +15,6 @@ const employeeRoutes = require("./src/routes/client.routes");
 app.use("/api/v1/simple-fast-backup", employeeRoutes);
 
 app.listen(port, () => {
+	console.clear();
 	console.log(`Server is listening on port ${port}`);
 });

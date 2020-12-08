@@ -2,18 +2,22 @@ const express = require("express");
 
 const router = express.Router();
 
-const employeeController = require("../controllers/client.controller");
+const clientController = require("../controllers/client.controller");
 
-router.get("/", employeeController.findAll);
+router.get("/", clientController.findAll);
 
-router.post("/", employeeController.create);
+router.post("/", clientController.create);
 
-router.get("/:codigo", employeeController.findById);
+router.get("/:codigo", clientController.findById);
 
-router.put("/:codigo/ativar-backup", employeeController.ativarBackup);
+router.put("/:codigo/ativar-backup", clientController.ativarBackup);
 
-router.put("/:codigo", employeeController.update);
+router.put("/:codigo/ativar-notificacao", clientController.ativarNotificacao);
 
-router.delete("/:codigo", employeeController.delete);
+router.put("/:codigo/hora-backup", clientController.definirHoraBackup);
+
+router.put("/:codigo", clientController.update);
+
+router.delete("/:codigo", clientController.delete);
 
 module.exports = router;

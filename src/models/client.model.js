@@ -33,17 +33,15 @@ Client.create = function (newClient, result) {
 };
 
 Client.findById = async function (codigo, result) {
-	console.log("codigo :", codigo);
-	await dbConn.query(
+	dbConn.query(
 		"Select * from clientes where codigo = ? ",
 		codigo,
-		async function (err, res) {
-			console.log("res :", res);
+		function (err, res) {
 			if (err) {
 				console.log("error: ", err);
-				await result(err, null);
+				result(err, null);
 			} else {
-				await result(null, res);
+				result(null, res && res[0]);
 			}
 		}
 	);
