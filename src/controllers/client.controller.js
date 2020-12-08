@@ -67,7 +67,10 @@ module.exports = {
 	},
 
 	async ativarBackup(req, res) {
-		if (req.body.query === Object && Object.keys(req.query).length === 0) {
+		if (
+			req.body.constructor === Object &&
+			Object.keys(req.query).length === 0
+		) {
 			res.status(400).send({
 				error: true,
 				message: "Por favor forneça todos os campos obrigatórios.",
@@ -108,7 +111,10 @@ module.exports = {
 	},
 
 	async ativarNotificacao(req, res) {
-		if (req.body.query === Object && Object.keys(req.query).length === 0) {
+		if (
+			req.body.constructor === Object &&
+			Object.keys(req.query).length === 0
+		) {
 			res.status(400).send({
 				error: true,
 				message: "Por favor forneça todos os campos obrigatórios.",
@@ -146,8 +152,70 @@ module.exports = {
 		}
 	},
 
+	async realizarBackup(req, res) {
+		if (
+			req.body.constructor === Object &&
+			Object.keys(req.params).length === 0
+		) {
+			res.status(400).send({
+				error: true,
+				message: "Por favor forneça todos os campos obrigatórios.",
+			});
+		} else {
+			const codigoCliente = req.params.codigo;
+
+			Client.findById(codigoCliente, function (err, client) {
+				if (err) res.send(err);
+				else if (client) {
+					scriptsController.realizacao_backup(codigoCliente);
+
+					res.json({
+						error: false,
+						message: "Backup iniciado com sucesso",
+					});
+				}
+			});
+		}
+	},
+
+	async restaurarBackup(req, res) {
+		if (
+			req.body.constructor === Object &&
+			Object.keys(req.params).length === 0 &&
+			Object.keys(req.body).length === 0
+		) {
+			res.status(400).send({
+				error: true,
+				message: "Por favor forneça todos os campos obrigatórios.",
+			});
+		} else {
+			const codigoCliente = req.params.codigo;
+			const ano = req.body.ano;
+			const mes = req.body.mes;
+
+			Client.findById(codigoCliente, function (err, client) {
+				if (err) res.send(err);
+				else if (client) {
+					scriptsController.restauracao_backup(
+						codigoCliente,
+						ano,
+						mes
+					);
+
+					res.json({
+						error: false,
+						message: "Restauração iniciada com sucesso",
+					});
+				}
+			});
+		}
+	},
+
 	async definirHoraBackup(req, res) {
-		if (req.body.query === Object && Object.keys(req.query).length === 0) {
+		if (
+			req.body.constructor === Object &&
+			Object.keys(req.query).length === 0
+		) {
 			res.status(400).send({
 				error: true,
 				message: "Por favor forneça todos os campos obrigatórios.",
@@ -164,7 +232,6 @@ module.exports = {
 						...clienteSelecionado,
 						hora_bkp_autm: horaBackup,
 					});
-					console.log("clienteAtualizado :", clienteAtualizado);
 
 					Client.update(
 						req.params.codigo,
@@ -177,6 +244,106 @@ module.exports = {
 								message: "Cliente atualizado com sucesso",
 								client,
 							});
+						}
+					);
+				}
+			});
+		}
+	},
+
+	async validarSenha(req, res) {
+		if (
+			req.body.constructor === Object &&
+			Object.keys(req.body).length === 0
+		) {
+			res.status(400).send({
+				error: true,
+				message: "Por favor forneça todos os campos obrigatórios.",
+			});
+		} else {
+			const codigoCliente = req.params.codigo;
+
+			if (Number(codigoCliente) === 1000) {
+				res.status(400).send({
+					error: true,
+					message: "Login não disponível para esse cliente.",
+				});
+			} else {
+				const senha = req.body.password_call;
+
+				Client.validatePassword(
+					codigoCliente,
+					function (err, password_call) {
+						if (err) res.send(err);
+						else if (`${password_call}` === `${senha}`) {
+							res.json({
+								error: false,
+								message: "Cliente autorizado",
+							});
+						} else {
+							res.status(401).send({
+								error: true,
+								message: "Usuário ou senha inválidos.",
+							});
+						}
+					}
+				);
+			}
+		}
+	},
+
+	async alterarSenha(req, res) {
+		if (
+			req.body.constructor === Object &&
+			Object.keys(req.body).length === 0 &&
+			Object.keys(req.params).length === 0
+		) {
+			res.status(400).send({
+				error: true,
+				message: "Por favor forneça todos os campos obrigatórios.",
+			});
+			return;
+		} else {
+			const codigoCliente = req.params.codigo;
+			const senha = req.body.password_call;
+			const novaSenha = req.body.new_password_call;
+
+			Client.findById(codigoCliente, function (err, client) {
+				if (err) res.send(err);
+				else if (client) {
+					Client.validatePassword(
+						codigoCliente,
+						function (err, password_call) {
+							if (err) res.send(err);
+							else if (`${password_call}` === `${senha}`) {
+								const clienteSelecionado = client;
+								const clienteAtualizado = new Client({
+									...clienteSelecionado,
+									password_call: novaSenha,
+								});
+
+								Client.update(
+									req.params.codigo,
+									clienteAtualizado,
+									function (err, client) {
+										if (err) res.send(err);
+										scriptsController.refazer_sip(
+											codigoCliente
+										);
+										res.json({
+											error: false,
+											message:
+												"Senha atualizada com sucesso",
+											client,
+										});
+									}
+								);
+							} else {
+								res.status(401).send({
+									error: true,
+									message: "Usuário ou senha inválidos.",
+								});
+							}
 						}
 					);
 				}

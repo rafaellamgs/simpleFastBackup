@@ -1,4 +1,6 @@
 "use strict";
+const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 
 var dbConn = require("./../../config/db.config");
 
@@ -42,6 +44,22 @@ Client.findById = async function (codigo, result) {
 				result(err, null);
 			} else {
 				result(null, res && res[0]);
+			}
+		}
+	);
+};
+
+Client.validatePassword = async function (codigo, result) {
+	dbConn.query(
+		"Select password_call from clientes where codigo = ? ",
+		codigo,
+		function (err, res) {
+			if (err) {
+				console.log("error: ", err);
+				result(err, null);
+			} else {
+				console.log("res :", res);
+				result(null, res && res[0] && res[0].password_call);
 			}
 		}
 	);
